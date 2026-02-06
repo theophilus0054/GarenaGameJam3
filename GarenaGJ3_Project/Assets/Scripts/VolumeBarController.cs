@@ -1,86 +1,90 @@
 using UnityEngine;
-using System.Collections;
+using DG.Tweening;
 
+[RequireComponent(typeof(RectTransform))]
 public class VolumeBarController : MonoBehaviour
 {
-    public Vector3 hiddenPosition;
-    public Vector3 showPosition;
+    [Header("Fall (Show)")]
+    [SerializeField] float fallDuration = 0.4f;
+    [SerializeField] Ease fallEase = Ease.InQuad;
 
-    [Header("Bounce Settings")]
-    public float bounceHeight = 0.5f;
-    public float bounceDuration = 0.6f;
-    public int bounceCount = 3;
+    [Header("Bounce (Show)")]
+    [SerializeField] float bounceHeight = 20f;   // pixel
+    [SerializeField] float bounceDuration = 0.15f;
+    [SerializeField] Ease bounceUpEase = Ease.OutQuad;
+    [SerializeField] Ease bounceDownEase = Ease.InQuad;
 
-    [Header("Spawn Settings")]
-    public float spawnHeight = 1.2f;
+    [Header("Hide (Up)")]
+    [SerializeField] float hideDuration = 0.25f;
+    [SerializeField] Ease hideEase = Ease.OutQuad;
 
-    private bool isVisible = false;
-    private Coroutine bounceRoutine;
+    [Header("Target Y (UI)")]
+    [SerializeField] RectTransform targetY;
+
+    RectTransform rect;
+    Tween currentTween;
+    float startY;
+    bool isActive;
 
     void Awake()
     {
-        transform.position = hiddenPosition;
+        rect = GetComponent<RectTransform>();
+        startY = rect.anchoredPosition.y; // simpan Y awal saja
     }
-
-    public bool isVolumeBarVisible { get { return isVisible; } }
 
     public void Toggle()
     {
-        if (isVisible)
-            Hide();
+        if (isActive)
+            HideSettings();
         else
-            Show();
+            ShowSettings();
+
+        isActive = !isActive;
     }
 
-    void Show()
+    public void ShowSettings()
     {
-        isVisible = true;
-
-        if (bounceRoutine != null)
-            StopCoroutine(bounceRoutine);
-
-        bounceRoutine = StartCoroutine(BounceIn());
+        PlayShowAnimation();
     }
 
-    void Hide()
+    public void HideSettings()
     {
-        isVisible = false;
-
-        if (bounceRoutine != null)
-            StopCoroutine(bounceRoutine);
-
-        transform.position = hiddenPosition;
+        PlayHideAnimation();
     }
 
-    IEnumerator BounceIn()
+    // ===================== ANIMATIONS =====================
+
+    void PlayShowAnimation()
     {
-        float elapsed = 0f;
+        currentTween?.Kill();
 
-        Vector3 startPos = showPosition + Vector3.up * spawnHeight;
+        float targetYPos = targetY.anchoredPosition.y;
 
-        while (elapsed < bounceDuration)
-        {
-            elapsed += Time.deltaTime;
+        currentTween = DOTween.Sequence()
 
-            float t = elapsed / bounceDuration;
+            // JATUH (Y saja)
+            .Append(rect.DOAnchorPosY(targetYPos, fallDuration)
+                .SetEase(fallEase))
 
-            // bounce curve (sinus + damping)
-            float bounce =
-                Mathf.Abs(Mathf.Sin(t * bounceCount * Mathf.PI)) *
-                bounceHeight *
-                (1f - t);
+            // BOUNCE UP
+            .Append(rect.DOAnchorPosY(targetYPos + bounceHeight, bounceDuration)
+                .SetEase(bounceUpEase))
 
-            float y = Mathf.Lerp(startPos.y, showPosition.y, t) + bounce;
+            // BOUNCE DOWN
+            .Append(rect.DOAnchorPosY(targetYPos, bounceDuration)
+                .SetEase(bounceDownEase));
+    }
 
-            transform.position = new Vector3(
-                showPosition.x,
-                y,
-                showPosition.z
-            );
+    void PlayHideAnimation()
+    {
+        currentTween?.Kill();
 
-            yield return null;
-        }
+        currentTween = rect.DOAnchorPosY(startY, hideDuration)
+            .SetEase(hideEase);
+    }
 
-        transform.position = showPosition;
+    void OnDisable()
+    {
+        currentTween?.Kill();
     }
 }

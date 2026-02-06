@@ -46,8 +46,7 @@ public class MainMenuManager : MonoBehaviour
         if (stageSelectOpen) return;
         if (stageSelectMenu == null) return;
 
-        if (volumeBar.isVolumeBarVisible)
-            ToggleSettings();
+        volumeBar.HideSettings();
 
         stageSelectOpen = true;
         stageSelectMenu.SetActive(true);
