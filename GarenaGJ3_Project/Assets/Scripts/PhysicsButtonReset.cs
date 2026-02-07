@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -8,6 +9,8 @@ public class PhysicsButtonReset : MonoBehaviour
     private Quaternion startRot;
     private SpriteRenderer spriteRenderer;
 
+    private Color defaultColor = Color.white;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -16,6 +19,8 @@ public class PhysicsButtonReset : MonoBehaviour
         startRot = transform.rotation;
 
         rb.bodyType = RigidbodyType2D.Static;
+
+        defaultColor = spriteRenderer.color;
     }
 
     public void EnablePhysics()
@@ -31,9 +36,14 @@ public class PhysicsButtonReset : MonoBehaviour
 
     public void DisablePhysicsAndReset()
     {
+        SetColor(defaultColor);
         rb.bodyType = RigidbodyType2D.Static;
-        rb.linearVelocity = Vector2.zero;
-        rb.angularVelocity = 0f;
+        
+        if (rb.bodyType != RigidbodyType2D.Static)
+        {
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+        }
 
         transform.position = startPos;
         transform.rotation = startRot;
