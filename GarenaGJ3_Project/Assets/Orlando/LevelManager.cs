@@ -22,6 +22,10 @@ public class LevelManager : MonoBehaviour
     public List<MonoBehaviour> randomEvents;
     public float randomEventInterval = 3f;
 
+    [Header("Object State")]
+    public GameObject minyakObject;
+    public GameObject garnishObject;
+
     private ILevelEvent levelEvent25;
     private ILevelEvent levelEvent50;
     private ILevelEvent levelEvent75;
@@ -48,6 +52,9 @@ public class LevelManager : MonoBehaviour
         levelEvent25 = event25 as ILevelEvent;
         levelEvent50 = event50 as ILevelEvent;
         levelEvent75 = event75 as ILevelEvent;
+
+        minyakObject?.SetActive(false);
+        garnishObject?.SetActive(false);
 
         foreach (var evt in randomEvents)
             if (evt is ILevelEvent e)
@@ -108,6 +115,15 @@ public class LevelManager : MonoBehaviour
         {
             Debug.Log("Event ini tidak berhak resume level");
             return;
+        }
+
+        if( evt == levelEvent25)
+        {
+            minyakObject.SetActive(true);
+        }
+        else if (evt == levelEvent50)
+        {
+            garnishObject.SetActive(true);
         }
 
         activeMilestoneEvent = null;

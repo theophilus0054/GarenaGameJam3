@@ -44,7 +44,7 @@ public class DragRequiredEvent : MonoBehaviour, ILevelEvent
         }
         else
         {
-            item.SnapTo(item.CurrentZone.transform.position);
+            item.ReturnToHome();
         }
     }
 }

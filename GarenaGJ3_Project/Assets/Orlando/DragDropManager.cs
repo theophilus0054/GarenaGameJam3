@@ -2,23 +2,44 @@
 
 public class DragDropManager : MonoBehaviour
 {
+    public static DragDropManager Instance { get; private set; }
+
     [Header("Settings")]
-    public float pickRadius = 0.15f;          // 0.01 terlalu kecil, gampang miss
+    public float pickRadius = 0.15f;
     public LayerMask draggableLayer = ~0;
     public LayerMask dropTargetLayer = ~0;
+
+    [Header("Ghost Settings")]
+    [Range(0f, 1f)]
+    public float ghostAlpha = 0.35f;
+    public int ghostSortingOffset = -1;
 
     private Camera cam;
 
     private IDraggable currentDrag;
     private Vector2 dragOffset;
-
     private IDropTarget currentHoverTarget;
+
+    // 👻 ghost
+    private GameObject ghostObject;
 
     void Awake()
     {
+        // =========================
+        // SINGLETON SETUP
+        // =========================
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        // DontDestroyOnLoad(gameObject); // aktifkan kalau mau global antar scene
+
         cam = Camera.main;
         if (cam == null)
-            Debug.LogError("[DragDropManager] Main Camera not found. Tag your camera as MainCamera.");
+            Debug.LogError("[DragDropManager] Main Camera not found.");
     }
 
     void Update()
@@ -30,6 +51,7 @@ public class DragDropManager : MonoBehaviour
 #endif
     }
 
+    #region Input
     void MouseUpdate()
     {
         if (Input.GetMouseButtonDown(0)) Begin(Input.mousePosition);
@@ -46,29 +68,18 @@ public class DragDropManager : MonoBehaviour
         if (t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary) Move(t.position);
         if (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled) End(t.position);
     }
+    #endregion
 
     void Begin(Vector2 screenPos)
     {
-        if (cam == null)
-        {
-            Debug.LogError("[DragDropManager] Begin() aborted: Camera is null.");
-            return;
-        }
+        if (cam == null) return;
 
         Vector2 worldPos = cam.ScreenToWorldPoint(screenPos);
-
         currentDrag = FindDraggableAt(worldPos);
 
-        if (currentDrag == null)
-        {
-            Debug.LogWarning($"[DragDropManager] No draggable found at {worldPos}. " +
-                             $"Try increasing pickRadius or check draggableLayer.");
-            return;
-        }
-
+        if (currentDrag == null) return;
         if (!currentDrag.CanBeDragged())
         {
-            Debug.LogWarning($"[DragDropManager] Draggable '{currentDrag.Transform.name}' cannot be dragged right now.");
             currentDrag = null;
             return;
         }
@@ -78,21 +89,13 @@ public class DragDropManager : MonoBehaviour
         currentDrag.OnDragStart(worldPos);
         UpdateHoverTarget(worldPos);
 
-        Debug.Log($"[DragDropManager] Drag started: {currentDrag.Transform.name}");
     }
 
     void Move(Vector2 screenPos)
     {
-        if (cam == null)
-        {
-            Debug.LogError("[DragDropManager] Move() aborted: Camera is null.");
-            return;
-        }
-
-        if (currentDrag == null) return;
+        if (cam == null || currentDrag == null) return;
 
         Vector2 worldPos = cam.ScreenToWorldPoint(screenPos);
-
         currentDrag.Transform.position = worldPos + dragOffset;
         currentDrag.OnDrag(worldPos);
 
@@ -101,122 +104,65 @@ public class DragDropManager : MonoBehaviour
 
     void End(Vector2 screenPos)
     {
-        if (cam == null)
-        {
-            Debug.LogError("[DragDropManager] End() aborted: Camera is null.");
-            return;
-        }
-
-        if (currentDrag == null) return;
+        if (cam == null || currentDrag == null) return;
 
         Vector2 worldPos = cam.ScreenToWorldPoint(screenPos);
 
         if (currentHoverTarget != null && currentHoverTarget.CanAccept(currentDrag))
         {
             currentHoverTarget.OnDrop(currentDrag, worldPos);
-            Debug.Log($"[DragDropManager] Dropped '{currentDrag.Transform.name}' on '{(currentHoverTarget as MonoBehaviour)?.name}'");
         }
         else
         {
-            Debug.LogWarning($"[DragDropManager] Drop rejected for '{currentDrag.Transform.name}'. Returning to start position.");
-
             if (currentDrag is DraggableItem item)
                 item.ReturnToDragStart();
-            else
-                Debug.LogError($"[DragDropManager] '{currentDrag.Transform.name}' is IDraggable but not DraggableItem. Cannot return to start position.");
         }
 
         ClearHover(currentDrag);
-
         currentDrag.OnDragEnd(worldPos);
-        Debug.Log($"[DragDropManager] Drag ended: {currentDrag.Transform.name}");
+
+        DestroyGhost(); // 👻 ghost MATI DI SINI
 
         currentDrag = null;
     }
 
-    IDraggable FindDraggableAt(Vector2 worldPos)
+
+    // =============================
+    // 👻 GHOST API
+    // =============================
+    public void SpawnGhostFrom(IDraggable source, Transform spawnTarget)
     {
-        // 1) Debug check: ada collider sama sekali ga?
-        Collider2D[] anyHits = Physics2D.OverlapCircleAll(worldPos, pickRadius);
-        if (anyHits.Length == 0)
-        {
-            Debug.LogWarning($"[DragDropManager] No Collider2D hit at {worldPos}. pickRadius={pickRadius}");
-            return null; // EARLY RETURN (biar ga dobel warning)
-        }
+        DestroyGhost();
 
-        // 2) Check layer mask draggable
-        Collider2D[] hits = Physics2D.OverlapCircleAll(worldPos, pickRadius, draggableLayer);
-        if (hits.Length == 0)
-        {
-            Debug.LogWarning($"[DragDropManager] Collider2D exists at {worldPos} but none match draggableLayer={draggableLayer.value}");
-            return null; // EARLY RETURN
-        }
+        var sr = source.Transform.GetComponent<SpriteRenderer>();
+        if (sr == null) return;
 
-        // 3) Cari DraggableItem paling aman (kamu pakai class ini)
-        for (int i = 0; i < hits.Length; i++)
-        {
-            var col = hits[i];
-            if (col == null) continue;
+        ghostObject = new GameObject($"Ghost_{source.Transform.name}");
+        ghostObject.transform.position = spawnTarget.position;
+        ghostObject.transform.rotation = source.Transform.rotation;
+        ghostObject.transform.localScale = source.Transform.localScale;
 
-            DraggableItem direct = col.GetComponentInParent<DraggableItem>(true);
-            if (direct != null)
-                return direct;
-        }
-
-        // 4) Fallback: cari lewat interface (kalau ada implement lain selain DraggableItem)
-        for (int i = 0; i < hits.Length; i++)
-        {
-            var col = hits[i];
-            if (col == null) continue;
-
-            var comps = col.GetComponentsInParent<MonoBehaviour>(true);
-            for (int c = 0; c < comps.Length; c++)
-            {
-                if (comps[c] is IDraggable d)
-                    return d;
-            }
-        }
-
-        Debug.LogWarning($"[DragDropManager] Collider(s) match draggableLayer at {worldPos} but no DraggableItem/IDraggable found in parent chain.");
-        return null;
+        var ghostSR = ghostObject.AddComponent<SpriteRenderer>();
+        ghostSR.sprite = sr.sprite;
+        ghostSR.color = new Color(1f, 1f, 1f, ghostAlpha);
+        ghostSR.sortingLayerID = sr.sortingLayerID;
+        ghostSR.sortingOrder = sr.sortingOrder + ghostSortingOffset;
     }
 
-    IDropTarget FindDropTargetAt(Vector2 worldPos)
+    public void DestroyGhost()
     {
-        Collider2D[] anyHits = Physics2D.OverlapCircleAll(worldPos, pickRadius);
-        // kalau ga ada collider sama sekali, normal
-        if (anyHits.Length == 0) return null;
+        if (ghostObject != null)
+            Destroy(ghostObject);
 
-        Collider2D[] hits = Physics2D.OverlapCircleAll(worldPos, pickRadius, dropTargetLayer);
-        if (hits.Length == 0) return null;
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            var col = hits[i];
-            if (col == null) continue;
-
-            // paling aman: kalau kamu pakai class DropZone, boleh ganti jadi direct search
-            // var dz = col.GetComponentInParent<DropZone>(true);
-            // if (dz != null) return dz;
-
-            var comps = col.GetComponentsInParent<MonoBehaviour>(true);
-            for (int c = 0; c < comps.Length; c++)
-            {
-                if (comps[c] is IDropTarget t)
-                    return t;
-            }
-        }
-
-        Debug.LogWarning($"[DragDropManager] Collider(s) match dropTargetLayer at {worldPos} but none implement IDropTarget.");
-        return null;
+        ghostObject = null;
     }
 
+    #region Hover
     void UpdateHoverTarget(Vector2 pointerWorld)
     {
         if (currentDrag == null) return;
 
         IDropTarget newTarget = FindDropTargetAt(pointerWorld);
-
         if (newTarget == currentHoverTarget) return;
 
         if (currentHoverTarget != null)
@@ -236,4 +182,40 @@ public class DragDropManager : MonoBehaviour
             currentHoverTarget = null;
         }
     }
+    #endregion
+
+    #region Raycast
+    IDraggable FindDraggableAt(Vector2 worldPos)
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(worldPos, pickRadius, draggableLayer);
+
+        foreach (var col in hits)
+        {
+            if (col == null) continue;
+
+            var d = col.GetComponentInParent<DraggableItem>(true);
+            if (d != null)
+                return d;
+        }
+
+        return null;
+    }
+
+    IDropTarget FindDropTargetAt(Vector2 worldPos)
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(worldPos, pickRadius, dropTargetLayer);
+
+        foreach (var col in hits)
+        {
+            if (col == null) continue;
+
+            var comps = col.GetComponentsInParent<MonoBehaviour>(true);
+            foreach (var c in comps)
+                if (c is IDropTarget t)
+                    return t;
+        }
+
+        return null;
+    }
+    #endregion
 }

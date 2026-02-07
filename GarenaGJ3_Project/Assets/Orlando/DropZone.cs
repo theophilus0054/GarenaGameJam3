@@ -4,7 +4,7 @@
 public class DropZone : MonoBehaviour, IDropTarget
 {
     [Header("Rules")]
-    public bool canMove = true;
+    public bool fillable = true;
 
     [Header("Initial Occupant (Optional)")]
     [SerializeField] private DraggableItem initialOccupant;
@@ -25,10 +25,12 @@ public class DropZone : MonoBehaviour, IDropTarget
     {
         if (initialOccupant == null) return;
         if (occupant != null) return;
+        if(!fillable) return;
 
         occupant = initialOccupant;
         occupant.SnapTo(transform.position);
         occupant.SetCurrentZone(this);
+        occupant.setHomeZone(this);
     }
 
     public DraggableItem GetOccupant() => occupant;
@@ -54,18 +56,15 @@ public class DropZone : MonoBehaviour, IDropTarget
             return;
         }
 
-        if (canMove)
-        {
-            occupant = item;
-            item.SnapTo(transform.position);
-            item.SetCurrentZone(this);
+        OnAnyDrop?.Invoke(item, this);
 
-            OnAnyDrop?.Invoke(item, this);
-        }
-        else
-        {
-            item.ReturnToDragStart();
-        }
+        if (!fillable)  
+            item.ReturnToHome();
+    }
+
+    public void SetOccupant(DraggableItem item)
+    {
+        occupant = item;
     }
 
     public void ClearOccupant(DraggableItem item)
