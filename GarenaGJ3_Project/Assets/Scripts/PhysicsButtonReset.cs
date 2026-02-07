@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -8,6 +9,10 @@ public class PhysicsButtonReset : MonoBehaviour
     private Quaternion startRot;
     private SpriteRenderer spriteRenderer;
 
+    private Color defaultColor = Color.white;
+    private Color hoverColor = MainMenuManager.Hex("#FFD966");   // yellow-ish hover
+    private Color clickColor = MainMenuManager.Hex("#FF6B6B");   // red-ish click
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -16,6 +21,28 @@ public class PhysicsButtonReset : MonoBehaviour
         startRot = transform.rotation;
 
         rb.bodyType = RigidbodyType2D.Static;
+
+        defaultColor = spriteRenderer.color;
+    }
+
+    void OnMouseEnter()
+    {
+        if (!MainMenuManager.Instance.physicsModeActive) return;
+        transform.DOScale(1.1f, 0.1f);
+        SetColor(hoverColor);
+    }
+
+    void OnMouseExit()
+    {
+        if (!MainMenuManager.Instance.physicsModeActive) return;
+        transform.DOScale(1f, 0.1f);
+        SetColor(defaultColor);
+    }
+
+    void OnMouseDown()
+    {
+        if (!MainMenuManager.Instance.physicsModeActive) return;
+        SetColor(clickColor);
     }
 
     public void EnablePhysics()
@@ -31,6 +58,7 @@ public class PhysicsButtonReset : MonoBehaviour
 
     public void DisablePhysicsAndReset()
     {
+        SetColor(defaultColor);
         rb.bodyType = RigidbodyType2D.Static;
         rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
