@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using DG.Tweening;
 
 [System.Serializable]
 public class MainData
@@ -40,6 +41,12 @@ public class MainMenuManager : MonoBehaviour
         }
     }
 
+    public static Color Hex(string hex)
+    {
+        ColorUtility.TryParseHtmlString(hex, out var c);
+        return c;
+    }
+
     // ================= PLAY =================
     public void OpenStageSelect()
     {
@@ -48,12 +55,24 @@ public class MainMenuManager : MonoBehaviour
 
         volumeBar.HideSettings();
 
-        stageSelectOpen = true;
-        stageSelectMenu.SetActive(true);
-        physicsModeActive = true;
+        DOVirtual.DelayedCall(0.3f, () =>
+        {
+            physicsModeActive = true;
 
-        foreach (var btn in menuButtons)
-            btn.EnablePhysics();
+            foreach (var btn in menuButtons) {
+                btn.EnablePhysics();
+                btn.SetColor(Hex("#848484"));
+            }
+        });
+
+        
+
+        // Delay 0.6 detik sebelum set stageSelectOpen = true
+        DOVirtual.DelayedCall(1.5f, () =>
+        {
+            stageSelectOpen = true;
+            stageSelectMenu.SetActive(true);
+        });
     }
 
     public void CloseStageSelect()
@@ -62,8 +81,10 @@ public class MainMenuManager : MonoBehaviour
         stageSelectMenu.SetActive(false);
         physicsModeActive = false;
 
-        foreach (var btn in menuButtons)
+        foreach (var btn in menuButtons) {
             btn.DisablePhysicsAndReset();
+            btn.SetColor(Hex("#FFFFFF"));
+        }
     }
 
     // ================= SETTINGS =================
@@ -73,6 +94,12 @@ public class MainMenuManager : MonoBehaviour
     }
 
     // ================= GAME =================
+    public void StartGame()
+    {
+        SceneManager.LoadScene("SteakLevel");
+        Debug.Log("Starting Game...");
+    }
+
     public void StartGame(int stage)
     {
         if (stage < 1 || stage > mainData.maxStage)

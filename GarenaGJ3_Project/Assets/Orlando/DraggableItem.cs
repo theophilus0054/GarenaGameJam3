@@ -24,13 +24,6 @@ public class DraggableItem : MonoBehaviour, IDraggable
     public void OnDragStart(Vector2 pointerWorld)
     {
         dragStartPosition = transform.position;
-
-        // saat mulai drag, lepas dulu dari slot sebelumnya (biar slotnya kosong lagi)
-        if (CurrentZone != null)
-        {
-            CurrentZone.ClearOccupant(this);
-            CurrentZone = null;
-        }
     }
 
     public void OnDrag(Vector2 pointerWorld)
@@ -45,11 +38,13 @@ public class DraggableItem : MonoBehaviour, IDraggable
 
     public void ReturnToDragStart()
     {
+        Debug.Log($"[DraggableItem] ReturnToDragStart to {dragStartPosition}");
         transform.position = dragStartPosition;
     }
 
     public void SnapTo(Vector3 worldPosition)
     {
+        Debug.Log($"[DraggableItem] SnapTo {worldPosition}");
         transform.position = worldPosition;
     }
 

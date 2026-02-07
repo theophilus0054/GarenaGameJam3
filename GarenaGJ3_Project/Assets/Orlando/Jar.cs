@@ -1,23 +1,76 @@
 ﻿using UnityEngine;
+using System.Collections;
 
-public class Jar : MonoBehaviour
+public class Jar : MonoBehaviour, ILevelEvent
 {
     private HoldDetector detector;
 
-    [SerializeField] private float holdToBreakTime = 3f; // detik (setelah OnHold terpanggil)
+    [Header("Hold Settings")]
+    [SerializeField] private float holdToBreakTime = 3f;
 
-    private float holdAccumulated = 0f;
-    private bool isHolding = false;
+    [Header("Time Limit")]
+    [SerializeField] private float timeLimit = 10f;
+
+    private float holdAccumulated;
+    private bool isHolding;
+    private bool isActive;
+    private Coroutine timerCoroutine;
+
+    public bool IsActive => isActive;
 
     void Awake()
     {
         detector = GetComponent<HoldDetector>();
-        if (detector == null)
-        {
-            Debug.LogError("[Jar] HoldDetector not found on this GameObject.");
-        }
     }
 
+    // =========================
+    // ILevelEvent
+    // =========================
+    public void Activate()
+    {
+        if (isActive) return;
+
+        isActive = true;
+        isHolding = false;
+        holdAccumulated = 0f;
+
+        gameObject.SetActive(true);
+
+        if (timerCoroutine != null)
+            StopCoroutine(timerCoroutine);
+
+        timerCoroutine = StartCoroutine(SelfDestructTimer());
+    }
+
+    IEnumerator SelfDestructTimer()
+    {
+        yield return new WaitForSeconds(timeLimit);
+        Debug.Log("[Jar] Self-destructed FAILED");
+        Destroy(gameObject);
+    }
+
+    public void Complete()
+    {
+        if (!isActive) return;
+
+        isActive = false;
+        isHolding = false;
+        holdAccumulated = 0f;
+
+        if (timerCoroutine != null)
+        {
+            StopCoroutine(timerCoroutine);
+            timerCoroutine = null;
+        }
+
+        gameObject.SetActive(false);
+
+        LevelManager.Instance.NotifyEventCompleted(this);
+    }
+
+    // =========================
+    // Hold Logic
+    // =========================
     void OnEnable()
     {
         if (detector != null)
@@ -35,31 +88,35 @@ public class Jar : MonoBehaviour
             detector.OnHoldRelease -= HandleHoldRelease;
         }
 
-        // safety reset
         isHolding = false;
         holdAccumulated = 0f;
     }
 
     void Update()
     {
-        if (!isHolding) return;
+        if (!isActive || !isHolding)
+            return;
 
         holdAccumulated += Time.deltaTime;
 
         if (holdAccumulated >= holdToBreakTime)
         {
-            Destroy(gameObject);
+            Complete();
         }
     }
 
     void HandleHoldStart()
     {
+        if (!isActive) return;
+
         isHolding = true;
-        holdAccumulated = 0f; // mulai hitung dari 0 saat hold terdeteksi
+        holdAccumulated = 0f;
     }
 
     void HandleHoldRelease()
     {
+        if (!isActive) return;
+
         isHolding = false;
         holdAccumulated = 0f;
     }
