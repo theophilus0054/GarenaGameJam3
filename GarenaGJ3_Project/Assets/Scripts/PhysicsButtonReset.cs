@@ -11,6 +11,11 @@ public class PhysicsButtonReset : MonoBehaviour
 
     private Color defaultColor = Color.white;
 
+    public float popUpForce = 5f;        // tinggi lompat
+    public float randomSideForce = 2f;   // dorong kiri kanan
+    public float randomTorque = 15f;
+
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -31,8 +36,14 @@ public class PhysicsButtonReset : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
 
-        rb.AddTorque(Random.Range(-15f, 15f));
+        // Random direction
+        float side = Random.Range(-randomSideForce, randomSideForce);
+        Vector2 force = new Vector2(side, popUpForce);
+
+        rb.AddForce(force, ForceMode2D.Impulse);
+        rb.AddTorque(Random.Range(-randomTorque, randomTorque), ForceMode2D.Impulse);
     }
+
 
     public void DisablePhysicsAndReset()
     {
