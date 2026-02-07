@@ -19,6 +19,7 @@ public class MainMenuManager : MonoBehaviour
 
     [Header("UI Panels")]
     public GameObject stageSelectMenu;
+    public UISlideFromTop uiSlide;
 
     [Header("Physics Buttons")]
     public PhysicsButtonReset[] menuButtons;
@@ -79,8 +80,10 @@ public class MainMenuManager : MonoBehaviour
         DOVirtual.DelayedCall(1.5f, () =>
         {
             stageSelectOpen = true;
-            if (stageSelectMenu != null)
+            if (stageSelectMenu != null) {
                 stageSelectMenu.SetActive(true);
+                uiSlide.PlayShowAnimation();
+            }
         });
     }
 
@@ -104,6 +107,7 @@ public class MainMenuManager : MonoBehaviour
         }
 
         SetSpritesColor(Hex(normalHex));
+        uiSlide.PlayHideAnimation();
     }
 
     // ================= SETTINGS =================
@@ -146,11 +150,11 @@ public class MainMenuManager : MonoBehaviour
     // ================= QUIT =================
     public void QuitGame()
     {
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
+        #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+        #else
+            Application.Quit();
+        #endif
     }
 
     // ================= BUTTON FEEDBACK =================
