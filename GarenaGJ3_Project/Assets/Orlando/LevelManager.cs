@@ -7,28 +7,37 @@ public class LevelManager : MonoBehaviour
 {
     public static LevelManager Instance { get; private set; }
 
+    // ================= TIMER =================
     [Header("Timer")]
     public float levelDuration = 120f;
 
     [Header("UI")]
     public Image fillBar;
 
+    // ================= MILESTONE EVENTS =================
     [Header("Milestone Events (PAUSE)")]
     public MonoBehaviour event25;
     public MonoBehaviour event50;
     public MonoBehaviour event75;
 
     [Header("Milestone Timeout")]
-    public float milestoneTimeout = 10f; // ⏱️ 10 detik
+    public float milestoneTimeout = 10f;
 
+    // ================= RANDOM EVENTS =================
     [Header("Random Events (NO PAUSE)")]
     public List<MonoBehaviour> randomEvents;
     public float randomEventInterval = 3f;
 
+    // ================= EVENT COOLDOWN =================
+    [Header("Event Cooldown")]
+    public float eventCooldownTime = 5f;
+
+    // ================= OBJECT STATE =================
     [Header("Object State")]
     public GameObject minyakObject;
     public GameObject garnishObject;
 
+    // ================= INTERNAL =================
     private ILevelEvent levelEvent25;
     private ILevelEvent levelEvent50;
     private ILevelEvent levelEvent75;
@@ -37,12 +46,17 @@ public class LevelManager : MonoBehaviour
     private ILevelEvent activeMilestoneEvent;
     private Coroutine milestoneTimeoutRoutine;
 
+    private Dictionary<ILevelEvent, float> eventCooldowns = new();
+
     private float currentTime;
     private bool isPaused;
+    private bool levelFinished;
 
     private bool reached25;
     private bool reached50;
     private bool reached75;
+
+    // ================= UNITY =================
 
     void Awake()
     {
@@ -73,6 +87,7 @@ public class LevelManager : MonoBehaviour
 
     void Update()
     {
+        if (levelFinished) return;
         if (isPaused) return;
 
         currentTime += Time.deltaTime;
@@ -82,9 +97,18 @@ public class LevelManager : MonoBehaviour
             fillBar.fillAmount = progress;
 
         CheckMilestones(progress);
+
+        // ===== WIN CONDITION =====
+        if (progress >= 1f)
+        {
+            levelFinished = true;
+            WinLoseManager.Instance.Win();
+        }
+
+        CleanupCooldowns();
     }
 
-    // ================= MILESTONE =================
+    // ================= MILESTONE CHECK =================
 
     void CheckMilestones(float progress)
     {
@@ -113,7 +137,6 @@ public class LevelManager : MonoBehaviour
         activeMilestoneEvent = evt;
         evt.Activate();
 
-        // start timeout
         if (milestoneTimeoutRoutine != null)
             StopCoroutine(milestoneTimeoutRoutine);
 
@@ -124,16 +147,15 @@ public class LevelManager : MonoBehaviour
     {
         yield return new WaitForSeconds(milestoneTimeout);
 
-        // kalau masih aktif dan belum selesai → DESTROY
         if (evt == activeMilestoneEvent && evt.IsActive)
         {
-            Debug.Log("Milestone FAILED → Destroy Event Object");
+            Debug.Log("❌ Milestone FAILED");
 
-            if(evt == levelEvent25)
+            if (evt == levelEvent25)
                 WinLoseManager.Instance.Lose(LoseCause.LoseBland);
-            else if(evt == levelEvent50)
+            else if (evt == levelEvent50)
                 WinLoseManager.Instance.Lose(LoseCause.LoseRaw);
-            else if(evt == levelEvent75)
+            else if (evt == levelEvent75)
                 WinLoseManager.Instance.Lose(LoseCause.LoseBland);
 
             activeMilestoneEvent = null;
@@ -141,13 +163,17 @@ public class LevelManager : MonoBehaviour
         }
     }
 
-    // ================= RESUME =================
+    // ================= EVENT COMPLETE =================
 
     public void NotifyEventCompleted(ILevelEvent evt)
     {
         Transform t = ((MonoBehaviour)evt).transform;
         ParticleManager.Instance.SpawnWithSound(ParticleType.Achieve, t);
 
+        // 🔒 cooldown event
+        eventCooldowns[evt] = Time.time + eventCooldownTime;
+
+        // only milestone can resume pause
         if (evt != activeMilestoneEvent)
         {
             Debug.Log("Event ini tidak berhak resume level");
@@ -169,11 +195,11 @@ public class LevelManager : MonoBehaviour
         isPaused = false;
     }
 
-    // ================= RANDOM EVENTS =================
+    // ================= RANDOM EVENT LOOP =================
 
     IEnumerator RandomEventLoop()
     {
-        while (true)
+        while (!levelFinished)
         {
             yield return new WaitForSeconds(randomEventInterval);
 
@@ -183,6 +209,7 @@ public class LevelManager : MonoBehaviour
             bool eventTriggered = false;
             List<ILevelEvent> shuffled = new List<ILevelEvent>(randomLevelEvents);
 
+            // shuffle
             for (int i = 0; i < shuffled.Count; i++)
             {
                 int randIndex = Random.Range(i, shuffled.Count);
@@ -191,16 +218,35 @@ public class LevelManager : MonoBehaviour
 
             foreach (var evt in shuffled)
             {
-                if (!evt.IsActive)
+                if (evt == null) continue;
+                if (evt.IsActive) continue;
+
+                // cooldown check
+                if (eventCooldowns.TryGetValue(evt, out float cooldownUntil))
                 {
-                    evt.Activate();
-                    eventTriggered = true;
-                    break;
+                    if (Time.time < cooldownUntil)
+                        continue;
                 }
+
+                evt.Activate();
+                eventTriggered = true;
+                break;
             }
 
             if (!eventTriggered)
-                Debug.Log("Semua random event sedang aktif, skip interval ini");
+                Debug.Log("Semua random event aktif / cooldown");
+        }
+    }
+
+    // ================= CLEAN COOLDOWN DICTIONARY =================
+
+    void CleanupCooldowns()
+    {
+        var keys = new List<ILevelEvent>(eventCooldowns.Keys);
+        foreach (var k in keys)
+        {
+            if (k == null)
+                eventCooldowns.Remove(k);
         }
     }
 }
