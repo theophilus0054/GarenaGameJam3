@@ -20,10 +20,12 @@ public class TipHandler : MonoBehaviour
     Random rand = new Random();
     //bool tipApplied = false;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    void Awake()
     {
-        tipText = this.GetComponent<TextMeshProUGUI>();
+        tipText = GetComponentInChildren<TextMeshProUGUI>(true);
+        // Safe place for reference assignment
+        if (!tipText)
+        Debug.LogError("TipHandler: TextMeshProUGUI not found!", this);
     }
 
     // Update is called once per frame

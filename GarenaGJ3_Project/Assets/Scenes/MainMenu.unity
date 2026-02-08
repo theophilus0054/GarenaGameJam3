@@ -1303,7 +1303,7 @@ AudioSource:
   m_GameObject: {fileID: 443180651}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: 24300002, guid: 0e2293011ae666f4793e7ec47be4fcd8, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
@@ -1404,7 +1404,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   soundsSO: {fileID: 11400000, guid: 5590ae3ea100a4e2b940346dbdb8e18a, type: 2}
-  masterMixer: {fileID: 0}
+  masterMixer: {fileID: 24300002, guid: 0e2293011ae666f4793e7ec47be4fcd8, type: 2}
 --- !u!1 &478989171
 GameObject:
   m_ObjectHideFlags: 0
@@ -2370,6 +2370,7 @@ GameObject:
   - component: {fileID: 828299734}
   - component: {fileID: 828299737}
   - component: {fileID: 828299738}
+  - component: {fileID: 828299739}
   m_Layer: 5
   m_Name: VolumeBar
   m_TagString: Untagged
@@ -2464,6 +2465,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIButtonHandler
   hoverSound: 0
   clickSound: 1
+--- !u!114 &828299739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 828299732}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27b82ed2879f3564eb223702b9bd9651, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VolumeSlider
+  audioMixer: {fileID: 24100000, guid: 0e2293011ae666f4793e7ec47be4fcd8, type: 2}
+  volumeParameter: MasterVolume
+  slider: {fileID: 0}
 --- !u!1 &847984530
 GameObject:
   m_ObjectHideFlags: 0
@@ -3938,7 +3954,7 @@ AudioSource:
   m_GameObject: {fileID: 1782864199}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: 24300002, guid: 0e2293011ae666f4793e7ec47be4fcd8, type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: e2869da382e684ae6a460c85bf71c522, type: 3}
   m_PlayOnAwake: 1
