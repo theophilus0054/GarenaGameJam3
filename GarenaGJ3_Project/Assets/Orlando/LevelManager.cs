@@ -18,6 +18,9 @@ public class LevelManager : MonoBehaviour
     public MonoBehaviour event50;
     public MonoBehaviour event75;
 
+    [Header("Milestone Timeout")]
+    public float milestoneTimeout = 10f; // ⏱️ 10 detik
+
     [Header("Random Events (NO PAUSE)")]
     public List<MonoBehaviour> randomEvents;
     public float randomEventInterval = 3f;
@@ -31,7 +34,8 @@ public class LevelManager : MonoBehaviour
     private ILevelEvent levelEvent75;
     private List<ILevelEvent> randomLevelEvents = new();
 
-    private ILevelEvent activeMilestoneEvent; // 🔥 KUNCI UTAMA
+    private ILevelEvent activeMilestoneEvent;
+    private Coroutine milestoneTimeoutRoutine;
 
     private float currentTime;
     private bool isPaused;
@@ -80,6 +84,8 @@ public class LevelManager : MonoBehaviour
         CheckMilestones(progress);
     }
 
+    // ================= MILESTONE =================
+
     void CheckMilestones(float progress)
     {
         if (progress >= 0.25f && !reached25)
@@ -104,31 +110,66 @@ public class LevelManager : MonoBehaviour
         if (evt == null) return;
 
         isPaused = true;
-        activeMilestoneEvent = evt; // 🔒 lock siapa yang boleh resume
+        activeMilestoneEvent = evt;
         evt.Activate();
+
+        // start timeout
+        if (milestoneTimeoutRoutine != null)
+            StopCoroutine(milestoneTimeoutRoutine);
+
+        milestoneTimeoutRoutine = StartCoroutine(MilestoneTimeout(evt));
     }
 
-    // 🔥 SATU-SATUNYA JALUR RESUME
+    IEnumerator MilestoneTimeout(ILevelEvent evt)
+    {
+        yield return new WaitForSeconds(milestoneTimeout);
+
+        // kalau masih aktif dan belum selesai → DESTROY
+        if (evt == activeMilestoneEvent && evt.IsActive)
+        {
+            Debug.Log("Milestone FAILED → Destroy Event Object");
+
+            if(evt == levelEvent25)
+                WinLoseManager.Instance.Lose(LoseCause.LoseBland);
+            else if(evt == levelEvent50)
+                WinLoseManager.Instance.Lose(LoseCause.LoseRaw);
+            else if(evt == levelEvent75)
+                WinLoseManager.Instance.Lose(LoseCause.LoseBland);
+
+            activeMilestoneEvent = null;
+            isPaused = false;
+        }
+    }
+
+    // ================= RESUME =================
+
     public void NotifyEventCompleted(ILevelEvent evt)
     {
+        Transform t = ((MonoBehaviour)evt).transform;
+        ParticleManager.Instance.SpawnWithSound(ParticleType.Achieve, t);
+
         if (evt != activeMilestoneEvent)
         {
             Debug.Log("Event ini tidak berhak resume level");
             return;
         }
 
-        if( evt == levelEvent25)
-        {
+        if (evt == levelEvent25)
             minyakObject.SetActive(true);
-        }
         else if (evt == levelEvent50)
-        {
             garnishObject.SetActive(true);
+
+        if (milestoneTimeoutRoutine != null)
+        {
+            StopCoroutine(milestoneTimeoutRoutine);
+            milestoneTimeoutRoutine = null;
         }
 
         activeMilestoneEvent = null;
         isPaused = false;
     }
+
+    // ================= RANDOM EVENTS =================
 
     IEnumerator RandomEventLoop()
     {
@@ -140,8 +181,6 @@ public class LevelManager : MonoBehaviour
                 continue;
 
             bool eventTriggered = false;
-
-            // Kita shuffle index supaya random tapi tetap bounded
             List<ILevelEvent> shuffled = new List<ILevelEvent>(randomLevelEvents);
 
             for (int i = 0; i < shuffled.Count; i++)
@@ -150,7 +189,6 @@ public class LevelManager : MonoBehaviour
                 (shuffled[i], shuffled[randIndex]) = (shuffled[randIndex], shuffled[i]);
             }
 
-            // Coba satu-satu sampai nemu yang belum aktif
             foreach (var evt in shuffled)
             {
                 if (!evt.IsActive)
@@ -161,12 +199,8 @@ public class LevelManager : MonoBehaviour
                 }
             }
 
-            // Kalau semua aktif → diam saja
             if (!eventTriggered)
-            {
                 Debug.Log("Semua random event sedang aktif, skip interval ini");
-            }
         }
     }
-
 }

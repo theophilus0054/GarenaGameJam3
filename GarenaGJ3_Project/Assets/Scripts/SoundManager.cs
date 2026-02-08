@@ -71,5 +71,13 @@ public enum SoundType
     LightningSpark,
     Unplug,
     SparklingDone,
+    Poof,
 
+    LoseStolen,
+    LoseCat,
+    LosePlug,
+    LoseBurned,
+    LoseBottle,
+    LoseBland,
+    LoseRaw
 }

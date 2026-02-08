@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using DG.Tweening;
+using System.Collections;
 
 public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
 {
@@ -22,6 +23,7 @@ public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
 
     private DraggableItem ejectedItem;
     private RandomFly activeVisual;
+    private Coroutine failCoroutine;
 
     void OnEnable()
     {
@@ -33,6 +35,7 @@ public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
         DropZone.OnAnyDrop -= OnAnyDrop;
     }
 
+    // ================= ACTIVATE =================
     public void Activate()
     {
         IsActive = true;
@@ -49,17 +52,18 @@ public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
         ejectedItem.SetCurrentZone(null);
 
         SpawnAndEject();
+
+        if (failCoroutine != null)
+            StopCoroutine(failCoroutine);
+
+        failCoroutine = StartCoroutine(FailAfterDuration());
     }
 
     void SpawnAndEject()
     {
-        GameObject go = Instantiate(
-            fairyPrefab,
-            targetZone.transform.position,
-            Quaternion.identity
-        );
-
+        GameObject go = Instantiate(fairyPrefab, targetZone.transform.position, Quaternion.identity);
         activeVisual = go.GetComponent<RandomFly>();
+
         if (activeVisual == null)
         {
             Debug.LogError("[EjectDropZoneEvent] Prefab has no RandomFly!");
@@ -76,10 +80,33 @@ public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
             ejectEase
         );
 
-        // 🔗 logic item ikut visual
+        // item follow fairy
         ejectedItem.Follow(activeVisual.transform);
     }
 
+    // ================= FAIL TIMER =================
+    IEnumerator FailAfterDuration()
+    {
+        yield return new WaitForSeconds(ejectDuration);
+
+        if (!IsActive) yield break;
+
+        Debug.Log("[EjectDropZoneEvent] Fairy escaped → FAIL");
+
+        // stop follow
+        ejectedItem.StopFollow();
+        ejectedItem.ReturnToDragStart();
+
+        if (activeVisual != null)
+            Destroy(activeVisual.gameObject);
+
+        Complete();
+
+        // destroy event object like Cable
+        WinLoseManager.Instance.Lose(LoseCause.LoseStolen);
+    }
+
+    // ================= DROP HANDLER =================
     void OnAnyDrop(DraggableItem item, DropZone zone)
     {
         if (!IsActive) return;
@@ -87,12 +114,14 @@ public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
 
         if (item == ejectedItem)
         {
+            // SUCCESS
+            StopCoroutine(failCoroutine);
+
             activeVisual?.Stop();
             if (activeVisual != null)
                 Destroy(activeVisual.gameObject);
 
             item.StopFollow();
-
             targetZone.SetOccupant(item);
             item.SnapTo(targetZone.transform.position);
             item.SetCurrentZone(targetZone);
@@ -105,6 +134,7 @@ public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
         }
     }
 
+    // ================= COMPLETE =================
     public void Complete()
     {
         IsActive = false;

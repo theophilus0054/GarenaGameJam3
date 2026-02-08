@@ -1,8 +1,7 @@
 using UnityEngine;
-using System.Collections;
 using DG.Tweening;
+using System.Collections;
 
-[RequireComponent(typeof(ClickDetector))]
 public class StoveTap : MonoBehaviour, ILevelEvent
 {
     private ClickDetector clickDetector;
@@ -11,6 +10,10 @@ public class StoveTap : MonoBehaviour, ILevelEvent
     [SerializeField] private int maxCounter = 5;
     [SerializeField] private float timeLimit = 8f;
     [SerializeField] private float recoverSpeed = 1.5f;
+
+    [Header("Max State Destroy")]
+    [SerializeField] private float maxStateDestroyTime = 5f;
+    private float maxStateTimer = 0f;
 
     [Header("Visual Target - SCALE")]
     [SerializeField] private Transform scaleTarget;
@@ -42,20 +45,15 @@ public class StoveTap : MonoBehaviour, ILevelEvent
     void Awake()
     {
         clickDetector = GetComponent<ClickDetector>();
-
-        if (scaleTarget == null && rotationTarget == null)
-            Debug.LogWarning("[StoveTap] Tidak ada visual target yang di-assign.");
     }
 
-    // =========================
-    // ILevelEvent
-    // =========================
     public void Activate()
     {
         if (isActive) return;
 
         isActive = true;
         counter = maxCounter;
+        maxStateTimer = 0f;
 
         if (scaleTarget != null)
             scaleTarget.gameObject.SetActive(true);
@@ -72,7 +70,6 @@ public class StoveTap : MonoBehaviour, ILevelEvent
     {
         yield return new WaitForSeconds(timeLimit);
         Debug.Log("[StoveTap] FAILED");
-
     }
 
     public void Complete()
@@ -96,9 +93,6 @@ public class StoveTap : MonoBehaviour, ILevelEvent
         LevelManager.Instance.NotifyEventCompleted(this);
     }
 
-    // =========================
-    // TAP LOGIC
-    // =========================
     void OnEnable()
     {
         if (clickDetector != null)
@@ -118,15 +112,14 @@ public class StoveTap : MonoBehaviour, ILevelEvent
         counter -= 1f;
         counter = Mathf.Clamp(counter, 0f, maxCounter);
 
+        maxStateTimer = 0f; // reset timer when tapped
+
         UpdateVisual();
 
         if (counter <= 0f)
             Complete();
     }
 
-    // =========================
-    // RECOVER
-    // =========================
     void Update()
     {
         if (!isActive) return;
@@ -135,17 +128,29 @@ public class StoveTap : MonoBehaviour, ILevelEvent
         counter = Mathf.Clamp(counter, 0f, maxCounter);
 
         UpdateVisual();
+
+        // MAX STATE TIMER
+        if (counter >= maxCounter)
+        {
+            maxStateTimer += Time.deltaTime;
+
+            if (maxStateTimer >= maxStateDestroyTime)
+            {
+                Debug.Log("[StoveTap] Stayed MAX too long → DESTROY");
+                WinLoseManager.Instance.Lose(LoseCause.LoseBurned);
+            }
+        }
+        else
+        {
+            maxStateTimer = 0f;
+        }
     }
 
-    // =========================
-    // VISUAL UPDATE (DOTWEEN)
-    // =========================
     void UpdateVisual(bool instant = false)
     {
         float t = 1f - (counter / maxCounter);
         t = Mathf.Clamp01(t);
 
-        // -------- SCALE --------
         if (scaleTarget != null)
         {
             float scale = Mathf.Lerp(maxScale, minScale, t);
@@ -153,18 +158,11 @@ public class StoveTap : MonoBehaviour, ILevelEvent
             scaleTween?.Kill();
 
             if (instant)
-            {
                 scaleTarget.localScale = Vector3.one * scale;
-            }
             else
-            {
-                scaleTween = scaleTarget
-                    .DOScale(scale, tweenDuration)
-                    .SetEase(tweenEase);
-            }
+                scaleTween = scaleTarget.DOScale(scale, tweenDuration).SetEase(tweenEase);
         }
 
-        // -------- ROTATION --------
         if (rotationTarget != null)
         {
             float rotZ = Mathf.Lerp(minRotationZ, maxRotationZ, t);
@@ -172,19 +170,11 @@ public class StoveTap : MonoBehaviour, ILevelEvent
             rotationTween?.Kill();
 
             if (instant)
-            {
                 rotationTarget.localRotation = Quaternion.Euler(0f, 0f, rotZ);
-            }
             else
-            {
                 rotationTween = rotationTarget
-                    .DOLocalRotate(
-                        new Vector3(0f, 0f, rotZ),
-                        tweenDuration,
-                        RotateMode.Fast
-                    )
+                    .DOLocalRotate(new Vector3(0f, 0f, rotZ), tweenDuration)
                     .SetEase(tweenEase);
-            }
         }
     }
 }

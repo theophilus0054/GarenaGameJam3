@@ -1,20 +1,31 @@
 ﻿using UnityEngine;
 using System.Collections;
+using DG.Tweening;
 
 public class Jar : MonoBehaviour, ILevelEvent
 {
     private HoldDetector detector;
 
     [Header("Hold Settings")]
-    [SerializeField] private float holdToBreakTime = 3f;
+    public float holdToBreakTime = 1f;
 
     [Header("Time Limit")]
-    [SerializeField] private float timeLimit = 10f;
+    public float timeLimit = 10f;
 
-    private float holdAccumulated;
+    [Header("Wobble Settings")]
+    public float minWobbleAngle = 2f;
+    public float maxWobbleAngle = 20f;
+    public float wobbleSpeed = 0.6f;
+    public float maxWobbleDestroyTime = 1f;
+
     private bool isHolding;
     private bool isActive;
-    private Coroutine timerCoroutine;
+    private Tween wobbleTween;
+
+    private float wobbleProgress; // 0 -> 1
+    private float currentWobbleAngle;
+
+    private float maxWobbleTimer;
 
     public bool IsActive => isActive;
 
@@ -24,29 +35,17 @@ public class Jar : MonoBehaviour, ILevelEvent
     }
 
     // =========================
-    // ILevelEvent
-    // =========================
     public void Activate()
     {
         if (isActive) return;
 
         isActive = true;
         isHolding = false;
-        holdAccumulated = 0f;
+        wobbleProgress = 0f;
+        maxWobbleTimer = 0f;
 
         gameObject.SetActive(true);
-
-        if (timerCoroutine != null)
-            StopCoroutine(timerCoroutine);
-
-        timerCoroutine = StartCoroutine(SelfDestructTimer());
-    }
-
-    IEnumerator SelfDestructTimer()
-    {
-        yield return new WaitForSeconds(timeLimit);
-        Debug.Log("[Jar] Self-destructed FAILED");
-        Destroy(gameObject);
+        StartWobble();
     }
 
     public void Complete()
@@ -54,70 +53,92 @@ public class Jar : MonoBehaviour, ILevelEvent
         if (!isActive) return;
 
         isActive = false;
-        isHolding = false;
-        holdAccumulated = 0f;
-
-        if (timerCoroutine != null)
-        {
-            StopCoroutine(timerCoroutine);
-            timerCoroutine = null;
-        }
-
-        gameObject.SetActive(false);
+        StopWobble();
+        transform.rotation = Quaternion.identity;
 
         LevelManager.Instance.NotifyEventCompleted(this);
     }
 
     // =========================
-    // Hold Logic
+    void Update()
+    {
+        if (!isActive) return;
+
+        // Idle = makin wobble
+        if (!isHolding)
+            wobbleProgress += Time.deltaTime / timeLimit;
+        // Hold = calming down
+        else
+            wobbleProgress -= Time.deltaTime / holdToBreakTime;
+
+        wobbleProgress = Mathf.Clamp01(wobbleProgress);
+        currentWobbleAngle = Mathf.Lerp(minWobbleAngle, maxWobbleAngle, wobbleProgress);
+
+        // ================= SUCCESS =================
+        if (wobbleProgress <= 0f)
+        {
+            Debug.Log("Jar stabilized - COMPLETE");
+            Complete();
+            return;
+        }
+
+        // ================= FAIL TIMER =================
+        if (Mathf.Approximately(wobbleProgress, 1f))
+        {
+            maxWobbleTimer += Time.deltaTime;
+            if (maxWobbleTimer >= maxWobbleDestroyTime)
+            {
+                Debug.Log("Jar exploded due to wobble overload");
+                WinLoseManager.Instance.Lose(LoseCause.LoseBottle);
+            }
+        }
+        else
+        {
+            maxWobbleTimer = 0f;
+        }
+    }
+
+
     // =========================
     void OnEnable()
     {
         if (detector != null)
         {
-            detector.OnHold += HandleHoldStart;
-            detector.OnHoldRelease += HandleHoldRelease;
+            detector.OnHold += () => isHolding = true;
+            detector.OnHoldRelease += () => isHolding = false;
         }
     }
 
     void OnDisable()
     {
-        if (detector != null)
+        StopWobble();
+    }
+
+    // =========================
+    void StartWobble()
+    {
+        StopWobble();
+
+        wobbleTween = DOTween.To(
+            () => 0f,
+            x =>
+            {
+                float angle = Mathf.Sin(x * Mathf.PI * 2f) * currentWobbleAngle;
+                transform.rotation = Quaternion.Euler(0, 0, angle);
+            },
+            1f,
+            wobbleSpeed
+        )
+        .SetLoops(-1, LoopType.Restart)
+        .SetEase(Ease.Linear);
+    }
+
+    void StopWobble()
+    {
+        if (wobbleTween != null)
         {
-            detector.OnHold -= HandleHoldStart;
-            detector.OnHoldRelease -= HandleHoldRelease;
+            wobbleTween.Kill();
+            wobbleTween = null;
         }
-
-        isHolding = false;
-        holdAccumulated = 0f;
-    }
-
-    void Update()
-    {
-        if (!isActive || !isHolding)
-            return;
-
-        holdAccumulated += Time.deltaTime;
-
-        if (holdAccumulated >= holdToBreakTime)
-        {
-            Complete();
-        }
-    }
-
-    void HandleHoldStart()
-    {
-        if (!isActive) return;
-
-        isHolding = true;
-        holdAccumulated = 0f;
-    }
-
-    void HandleHoldRelease()
-    {
-        if (!isActive) return;
-
-        isHolding = false;
-        holdAccumulated = 0f;
     }
 }

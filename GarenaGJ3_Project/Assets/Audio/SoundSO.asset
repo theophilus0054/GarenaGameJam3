@@ -29,3 +29,64 @@ MonoBehaviour:
     volume: 0.7
     sounds:
     - {fileID: 8300000, guid: 056efaee704dd487da879af6f575460a, type: 3}
+  - type: 4
+    volume: 0.7
+    sounds: []
+  - type: 5
+    volume: 0.7
+    sounds: []
+  - type: 6
+    volume: 0.7
+    sounds: []
+  - type: 7
+    volume: 0.7
+    sounds: []
+  - type: 8
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: 056efaee704dd487da879af6f575460a, type: 3}
+  - type: 9
+    volume: 0.7
+    sounds: []
+  - type: 10
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: 0f727f52ff3b449d39e59173d8970940, type: 3}
+  - type: 11
+    volume: 0.7
+    sounds: []
+  - type: 12
+    volume: 1
+    sounds:
+    - {fileID: 8300000, guid: 1b4d8e2584e694ccba3c35e1e122d9e7, type: 3}
+  - type: 13
+    volume: 0.7
+    sounds: []
+  - type: 14
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: 3fd4ea2e22fd04a7186106c1f52e3c74, type: 3}
+  - type: 15
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: 5108827c332304946bcc48a8001d0a45, type: 3}
+  - type: 16
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: 0f727f52ff3b449d39e59173d8970940, type: 3}
+  - type: 17
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: 9c8f868e5ac5e4b97adcf92d56b8c1a8, type: 3}
+  - type: 18
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: d6ab79640d7d348c4a9c9744b9ee1c89, type: 3}
+  - type: 19
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: 698c7d86274fa4c98806ed3accc04bbf, type: 3}
+  - type: 20
+    volume: 0.7
+    sounds:
+    - {fileID: 8300000, guid: d6ab79640d7d348c4a9c9744b9ee1c89, type: 3}

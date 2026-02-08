@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using DG.Tweening;
 
 public class Cable : MonoBehaviour, ILevelEvent
 {
@@ -12,9 +13,18 @@ public class Cable : MonoBehaviour, ILevelEvent
     [Header("Time Limit")]
     [SerializeField] private float timeLimit = 10f;
 
+    [Header("Cable Animation")]
+    [SerializeField] private float moveDownDistance = 2f;
+    [SerializeField] private float moveDuration = 0.4f;
+    [SerializeField] private float resetDelay = 3f;
+
     private bool armed;
     private bool isActive;
     private Coroutine timerCoroutine;
+    private Coroutine particleCoroutine;
+
+    private Vector3 startPos;
+    private Tween moveTween;
 
     public bool IsActive => isActive;
 
@@ -22,10 +32,12 @@ public class Cable : MonoBehaviour, ILevelEvent
     {
         if (swipeDetector == null)
             swipeDetector = GetComponent<SwipeDetector>();
+
+        startPos = transform.position;
     }
 
     // =========================
-    // ILevelEvent
+    // ACTIVATE
     // =========================
     public void Activate()
     {
@@ -35,20 +47,29 @@ public class Cable : MonoBehaviour, ILevelEvent
         armed = false;
 
         gameObject.SetActive(true);
+        transform.position = startPos;
 
         if (timerCoroutine != null)
             StopCoroutine(timerCoroutine);
 
         timerCoroutine = StartCoroutine(SelfDestructTimer());
+
+        if (particleCoroutine != null)
+            StopCoroutine(particleCoroutine);
+
+        particleCoroutine = StartCoroutine(SummonParticlesLoop());
     }
 
     IEnumerator SelfDestructTimer()
     {
         yield return new WaitForSeconds(timeLimit);
         Debug.Log("[Cable] Self-destructed FAILED");
-        Destroy(gameObject);
+        WinLoseManager.Instance.Lose(LoseCause.LosePlug);
     }
 
+    // =========================
+    // COMPLETE
+    // =========================
     public void Complete()
     {
         if (!isActive) return;
@@ -62,9 +83,46 @@ public class Cable : MonoBehaviour, ILevelEvent
             timerCoroutine = null;
         }
 
-        gameObject.SetActive(false);
+        if (particleCoroutine != null)
+        {
+            StopCoroutine(particleCoroutine);
+            particleCoroutine = null;
+        }
+
+        // MOVE DOWN
+        moveTween?.Kill();
+        moveTween = transform.DOMoveY(startPos.y - moveDownDistance, moveDuration)
+            .SetEase(Ease.OutBack);
+
+        // RESET AFTER DELAY
+        StartCoroutine(ResetCableAfterDelay());
 
         LevelManager.Instance.NotifyEventCompleted(this);
+    }
+
+    IEnumerator ResetCableAfterDelay()
+    {
+        yield return new WaitForSeconds(resetDelay);
+
+        moveTween?.Kill();
+        transform.DOMove(startPos, moveDuration).SetEase(Ease.OutBack);
+    }
+
+    // =========================
+    // PARTICLE LOOP
+    // =========================
+    IEnumerator SummonParticlesLoop()
+    {
+        while (isActive)
+        {
+            ParticleManager.Instance.SpawnWithSound(ParticleType.Spark, transform);
+            yield return new WaitForSeconds(0.25f);
+            for(int i = 4; i > 0; i--)
+            {
+                ParticleManager.Instance.Spawn(ParticleType.Spark, transform);
+                yield return new WaitForSeconds(0.2f);
+            }
+        }
     }
 
     // =========================
