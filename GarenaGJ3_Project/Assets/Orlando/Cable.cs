@@ -97,6 +97,7 @@ public class Cable : MonoBehaviour, ILevelEvent
         // RESET AFTER DELAY
         StartCoroutine(ResetCableAfterDelay());
 
+        SoundManager.PlaySound(SoundType.Unplug);
         LevelManager.Instance.NotifyEventCompleted(this);
     }
 

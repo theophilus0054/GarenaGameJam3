@@ -176,6 +176,7 @@ MonoBehaviour:
   difficultyText: {fileID: 903938102}
   increaseButton: {fileID: 302269464}
   decreaseButton: {fileID: 386569488}
+  startButton: {fileID: 0}
 --- !u!114 &99997293
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -258,8 +259,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 364919582}
-        m_TargetAssemblyTypeName: MainMenuManager, Assembly-CSharp
+      - m_Target: {fileID: 99997292}
+        m_TargetAssemblyTypeName: Difficulty, Assembly-CSharp
         m_MethodName: StartGame
         m_Mode: 1
         m_Arguments:

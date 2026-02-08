@@ -61,6 +61,8 @@ public class SteakFlip : MonoBehaviour, ILevelEvent
             timerCoroutine = null;
         }
 
+        SoundManager.PlaySound(SoundType.Sizzle);
+
         LevelManager.Instance.NotifyEventCompleted(this);
     }
 

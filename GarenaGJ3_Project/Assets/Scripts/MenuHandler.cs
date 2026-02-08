@@ -22,18 +22,21 @@ public class MenuHandler : MonoBehaviour
 
     private void OnRetryButtonClicked()
     {
+        Time.timeScale = 1f;
         // Restart the current scene
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     private void OnMainMenuButtonClicked()
     {
+        Time.timeScale = 1f;
         // Load the main menu scene
         SceneManager.LoadScene("MainMenu");
     }
 
     private void OnResumeButtonClicked()
     {
+        Time.timeScale = 1f;
         // Hide the pause menu
         pauseMenuUI.SetActive(false);
     }

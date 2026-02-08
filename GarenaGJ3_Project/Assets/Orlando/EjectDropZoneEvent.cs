@@ -79,6 +79,7 @@ public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
             ejectDuration,
             ejectEase
         );
+        SoundManager.PlaySound(SoundType.FairyPickup);
 
         // item follow fairy
         ejectedItem.Follow(activeVisual.transform);
@@ -140,6 +141,7 @@ public class EjectDropZoneEvent : MonoBehaviour, ILevelEvent
         IsActive = false;
         ejectedItem = null;
         activeVisual = null;
+        SoundManager.PlaySound(SoundType.DropItem);
 
         LevelManager.Instance.NotifyEventCompleted(this);
     }

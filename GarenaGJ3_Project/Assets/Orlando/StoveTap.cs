@@ -63,6 +63,8 @@ public class StoveTap : MonoBehaviour, ILevelEvent
         if (timerCoroutine != null)
             StopCoroutine(timerCoroutine);
 
+        SoundManager.PlaySound(SoundType.Burnt);
+
         timerCoroutine = StartCoroutine(SelfDestructTimer());
     }
 
@@ -113,6 +115,7 @@ public class StoveTap : MonoBehaviour, ILevelEvent
         counter = Mathf.Clamp(counter, 0f, maxCounter);
 
         maxStateTimer = 0f; // reset timer when tapped
+        SoundManager.PlaySound(SoundType.StoveTap);
 
         UpdateVisual();
 

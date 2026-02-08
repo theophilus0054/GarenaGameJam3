@@ -28,6 +28,7 @@ public class DragRequiredEvent : MonoBehaviour, ILevelEvent
     {
         IsActive = false;
         Debug.Log("DragRequiredEvent Completed");
+        SoundManager.PlaySound(SoundType.Seasoning);
 
         LevelManager.Instance.NotifyEventCompleted(this);
     }

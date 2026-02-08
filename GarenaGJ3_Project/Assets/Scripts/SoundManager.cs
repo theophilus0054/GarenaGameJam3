@@ -66,6 +66,7 @@ public enum SoundType
     CatHiss,
     BottleWiggle,
     FairyPickup,
+    DropItem,
     Seasoning,
     StoveTap,
     LightningSpark,

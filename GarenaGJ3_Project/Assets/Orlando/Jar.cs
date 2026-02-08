@@ -45,6 +45,7 @@ public class Jar : MonoBehaviour, ILevelEvent
         maxWobbleTimer = 0f;
 
         gameObject.SetActive(true);
+        SoundManager.PlaySound(SoundType.BottleWiggle);
         StartWobble();
     }
 

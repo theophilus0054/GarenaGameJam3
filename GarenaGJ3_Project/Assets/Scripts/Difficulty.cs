@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public enum GameDifficulty
 {
@@ -12,28 +13,33 @@ public enum GameDifficulty
 
 public class Difficulty : MonoBehaviour
 {
+    public static Difficulty Instance;
+
     public GameDifficulty currentDifficulty = GameDifficulty.EASY;
+
+    [Header("UI")]
     [SerializeField] private TextMeshProUGUI difficultyText;
     [SerializeField] private Button increaseButton;
     [SerializeField] private Button decreaseButton;
+    [SerializeField] private Button startButton;
 
-    public void SetDifficulty(string value)
+    void Awake()
     {
-        difficultyText.text = value;
+        Instance = this;
     }
 
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         increaseButton.onClick.AddListener(IncreaseDifficulty);
         decreaseButton.onClick.AddListener(DecreaseDifficulty);
+        startButton.onClick.AddListener(StartGame);
+
+        UpdateText();
     }
 
-    // Update is called once per frame
-    void Update()
+    void UpdateText()
     {
-        
+        difficultyText.text = currentDifficulty.ToString();
     }
 
     void IncreaseDifficulty()
@@ -42,7 +48,7 @@ public class Difficulty : MonoBehaviour
         currentDifficulty = (GameDifficulty)(((int)currentDifficulty + 1) % max);
 
         Debug.Log("Difficulty: " + currentDifficulty);
-        SetDifficulty(currentDifficulty.ToString());
+        UpdateText();
     }
 
     void DecreaseDifficulty()
@@ -51,6 +57,36 @@ public class Difficulty : MonoBehaviour
         currentDifficulty = (GameDifficulty)(((int)currentDifficulty - 1 + max) % max);
 
         Debug.Log("Difficulty: " + currentDifficulty);
-        SetDifficulty(currentDifficulty.ToString());
+        UpdateText();
+    }
+
+    // ================= START GAME BASED ON DIFFICULTY =================
+    public void StartGame()
+    {
+        string sceneName = GetSceneByDifficulty();
+
+        Debug.Log("Loading Scene: " + sceneName);
+        SceneManager.LoadScene(sceneName);
+    }
+
+    string GetSceneByDifficulty()
+    {
+        switch (currentDifficulty)
+        {
+            case GameDifficulty.EASY:
+                return "EasySteakLevel";
+
+            case GameDifficulty.MEDIUM:
+                return "MediumSteakLevel";
+
+            case GameDifficulty.HARD:
+                return "HardSteakLevel";
+
+            case GameDifficulty.NIGHTMARE:
+                return "NightmareSteakLevel";
+
+            default:
+                return "EasySteakLevel";
+        }
     }
 }

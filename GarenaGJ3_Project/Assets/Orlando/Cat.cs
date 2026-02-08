@@ -47,6 +47,8 @@ public class Cat : MonoBehaviour, ILevelEvent
 
         RandomizeCat();
 
+        SoundManager.PlaySound(SoundType.CatMeow);
+
         if (timerCoroutine != null)
             StopCoroutine(timerCoroutine);
 
@@ -129,6 +131,7 @@ public class Cat : MonoBehaviour, ILevelEvent
         if (swipeCount >= requiredSwipes && !hasTriggeredMad)
         {
             hasTriggeredMad = true; // LOCK
+            SoundManager.PlaySound(SoundType.CatHiss);
             animator.SetTrigger("IsMad");
         }
     }
